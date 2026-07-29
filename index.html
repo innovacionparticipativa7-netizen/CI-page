@@ -4,84 +4,114 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Panel IP · Innovación Participativa</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500&family=Inter:wght@300;400&display=swap" rel="stylesheet">
 <style>
   :root{
-    --graphite:#1C1F22;
-    --graphite-2:#25292D;
-    --paper:#F5F3EE;
-    --yellow:#F2B705;
-    --steel:#3D5A73;
-    --rust:#C1440E;
-    --line: rgba(245,243,238,0.14);
+    --void:#08090C;
+    --panel: rgba(255,255,255,0.025);
+    --panel-hover: rgba(255,255,255,0.045);
+    --text:#E7ECEF;
+    --dim: rgba(231,236,239,0.44);
+    --line: rgba(231,236,239,0.10);
+    --cyan:#6EE7F0;
+    --violet:#8B8CF7;
   }
 
   *{box-sizing:border-box;}
   html,body{margin:0;padding:0;}
 
   body{
-    background:var(--graphite);
-    color:var(--paper);
-    font-family: 'Inter', 'Segoe UI', Arial, sans-serif;
+    background:var(--void);
+    color:var(--text);
+    font-family:'Inter', sans-serif;
+    font-weight:300;
     min-height:100vh;
-    background-image:
-      linear-gradient(180deg, var(--graphite) 0%, var(--graphite-2) 100%);
+    position:relative;
+    overflow-x:hidden;
   }
 
-  .hazard{
-    height:10px;
-    width:100%;
-    background: repeating-linear-gradient(
-      -45deg,
-      var(--yellow),
-      var(--yellow) 14px,
-      var(--graphite) 14px,
-      var(--graphite) 28px
-    );
+  body::before{
+    content:"";
+    position:fixed;
+    inset:0;
+    background-image:
+      linear-gradient(rgba(231,236,239,0.035) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(231,236,239,0.035) 1px, transparent 1px);
+    background-size: 64px 64px;
+    mask-image: radial-gradient(ellipse 80% 60% at 50% 0%, black 0%, transparent 75%);
+    pointer-events:none;
+    z-index:0;
   }
+
+  header, main, footer{ position:relative; z-index:1; }
 
   header{
-    padding: 64px 24px 40px;
-    max-width: 1040px;
+    padding: 96px 24px 56px;
+    max-width: 980px;
     margin: 0 auto;
-    border-bottom: 1px solid var(--line);
   }
 
   .eyebrow{
-    font-family:'Courier New', monospace;
-    letter-spacing: 3px;
-    font-size: 12px;
-    color: var(--yellow);
+    display:flex;
+    align-items:center;
+    gap: 10px;
+    font-family:'Space Grotesk', sans-serif;
+    letter-spacing: 4px;
+    font-size: 11px;
+    color: var(--cyan);
     text-transform: uppercase;
-    margin: 0 0 14px;
+    margin: 0 0 22px;
+  }
+
+  .eyebrow::before{
+    content:"";
+    width:6px; height:6px;
+    border-radius:50%;
+    background: var(--cyan);
+    box-shadow: 0 0 8px 1px var(--cyan);
   }
 
   h1{
-    font-family: 'Arial Black', 'Segoe UI', sans-serif;
-    font-weight: 900;
-    font-size: clamp(32px, 6vw, 56px);
-    line-height: 1.02;
-    margin: 0 0 16px;
+    font-family:'Space Grotesk', sans-serif;
+    font-weight: 300;
+    font-size: clamp(30px, 5.2vw, 50px);
+    line-height: 1.12;
+    margin: 0 0 20px;
     letter-spacing: -0.5px;
+    max-width: 640px;
+  }
+
+  h1 em{
+    font-style:normal;
+    background: linear-gradient(90deg, var(--cyan), var(--violet));
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
   }
 
   header p.sub{
-    color: rgba(245,243,238,0.65);
-    font-size: 16px;
-    max-width: 560px;
-    line-height: 1.55;
+    color: var(--dim);
+    font-size: 15px;
+    font-weight:300;
+    max-width: 480px;
+    line-height: 1.7;
     margin: 0;
   }
 
   main{
-    max-width: 1040px;
+    max-width: 980px;
     margin: 0 auto;
-    padding: 40px 24px 100px;
+    padding: 8px 24px 120px;
   }
 
   .grid{
     display:grid;
-    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-    gap: 18px;
+    grid-template-columns: repeat(auto-fit, minmax(270px, 1fr));
+    gap: 1px;
+    background: var(--line);
+    border: 1px solid var(--line);
   }
 
   .card{
@@ -89,169 +119,187 @@
     display:flex;
     flex-direction: column;
     justify-content: space-between;
-    background: var(--graphite-2);
-    border: 1px solid var(--line);
-    border-radius: 4px;
-    padding: 26px 24px 22px;
-    min-height: 168px;
+    background: var(--void);
+    padding: 30px 26px 26px;
+    min-height: 176px;
     text-decoration: none;
-    color: var(--paper);
+    color: var(--text);
     overflow: hidden;
-    transition: transform 0.18s ease, border-color 0.18s ease, background 0.18s ease;
+    transition: background 0.25s ease;
   }
 
-  .card:hover{
-    transform: translateY(-3px);
-    border-color: var(--yellow);
-    background: #2B3034;
-  }
+  .card:hover{ background: var(--panel-hover); }
 
   .card:focus-visible{
-    outline: 2px solid var(--yellow);
-    outline-offset: 2px;
+    outline: 1px solid var(--cyan);
+    outline-offset: -1px;
+  }
+
+  .card::before, .card::after{
+    content:"";
+    position:absolute;
+    width:10px; height:10px;
+    border-style:solid;
+    border-color: transparent;
+    opacity:0;
+    transition: opacity 0.25s ease, border-color 0.25s ease;
+  }
+  .card::before{
+    top:10px; left:10px;
+    border-width: 1px 0 0 1px;
+  }
+  .card::after{
+    bottom:10px; right:10px;
+    border-width: 0 1px 1px 0;
+  }
+  .card:hover::before, .card:hover::after{
+    opacity:1;
+    border-color: var(--cyan);
   }
 
   .tag{
-    position:absolute;
-    top:0; right:0;
-    font-family:'Courier New', monospace;
+    font-family:'Space Grotesk', sans-serif;
     font-size: 11px;
-    letter-spacing: 1.5px;
-    color: var(--graphite);
-    background: var(--yellow);
-    padding: 4px 10px;
-    border-bottom-left-radius: 4px;
-    font-weight:700;
+    letter-spacing: 2px;
+    color: var(--cyan);
+    margin-bottom: 20px;
+    display:inline-block;
   }
 
-  .card.alt .tag{ background: var(--steel); color: var(--paper); }
-
   .card h2{
-    font-size: 21px;
-    margin: 6px 0 8px;
-    font-weight: 700;
-    padding-right: 70px;
+    font-family:'Space Grotesk', sans-serif;
+    font-size: 19px;
+    font-weight: 400;
+    margin: 0 0 10px;
+    letter-spacing: -0.2px;
   }
 
   .card p{
     margin: 0;
-    font-size: 14px;
-    color: rgba(245,243,238,0.6);
-    line-height: 1.5;
+    font-size: 13.5px;
+    font-weight:300;
+    color: var(--dim);
+    line-height: 1.6;
   }
 
   .card .go{
-    margin-top: 18px;
-    font-size: 13px;
-    font-weight: 700;
-    color: var(--yellow);
+    margin-top: 22px;
+    font-family:'Space Grotesk', sans-serif;
+    font-size: 12px;
+    letter-spacing: 1px;
+    color: var(--text);
     display:flex;
     align-items:center;
-    gap: 6px;
+    gap: 8px;
+    opacity: 0.55;
+    transition: opacity 0.25s ease, gap 0.25s ease;
   }
 
-  .card .go svg{ width:14px; height:14px; transition: transform 0.18s ease; }
+  .card:hover .go{ opacity:1; color: var(--cyan); }
+  .card .go svg{ width:12px; height:12px; transition: transform 0.25s ease; }
   .card:hover .go svg{ transform: translateX(4px); }
 
   footer{
-    max-width: 1040px;
+    max-width: 980px;
     margin: 0 auto;
-    padding: 0 24px 48px;
-    color: rgba(245,243,238,0.35);
-    font-size: 12px;
-    font-family:'Courier New', monospace;
-    letter-spacing: 0.5px;
+    padding: 0 24px 56px;
+    color: rgba(231,236,239,0.28);
+    font-size: 11px;
+    font-family:'Space Grotesk', sans-serif;
+    letter-spacing: 1.5px;
+    display:flex;
+    justify-content: space-between;
   }
 
   @media (prefers-reduced-motion: reduce){
     .card{ transition: none; }
-    .card:hover{ transform:none; }
   }
 </style>
 </head>
 <body>
 
-  <div class="hazard"></div>
-
   <header>
-    <p class="eyebrow">Innovación Participativa · Panel de Acceso</p>
-    <h1>Estaciones de trabajo,<br>un solo tablero.</h1>
-    <p class="sub">Selecciona el sistema al que necesitas entrar. Cada acceso te lleva directo a su plataforma correspondiente.</p>
+    <p class="eyebrow">Innovación Participativa</p>
+    <h1>Panel de acceso a los <em>sistemas</em> de mejora continua.</h1>
+    <p class="sub">Selecciona una estación para continuar. Cada acceso te lleva directo a su plataforma.</p>
   </header>
 
   <main>
     <div class="grid">
 
       <a class="card" href="https://innovacionparticipativa7-netizen.github.io/ProyectScore/" target="_blank" rel="noopener">
-        <span class="tag">LOGIN</span>
         <div>
+          <span class="tag">01 · LOGIN</span>
           <h2>Login</h2>
           <p>Acceso general a la plataforma de Innovación Participativa.</p>
         </div>
-        <span class="go">Entrar
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+        <span class="go">ENTRAR
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
         </span>
       </a>
 
-      <a class="card alt" href="https://innovacionparticipativa7-netizen.github.io/5Ss-auditoria/auditoria_5s.html" target="_blank" rel="noopener">
-        <span class="tag">5S</span>
+      <a class="card" href="https://innovacionparticipativa7-netizen.github.io/5Ss-auditoria/auditoria_5s.html" target="_blank" rel="noopener">
         <div>
+          <span class="tag">02 · 5S</span>
           <h2>Auditoría 5S</h2>
           <p>Registra y evalúa el cumplimiento de las 5S en tu área de trabajo.</p>
         </div>
-        <span class="go">Entrar
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+        <span class="go">ENTRAR
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
         </span>
       </a>
 
       <a class="card" href="https://innovacionparticipativa7-netizen.github.io/QRQC-Maturity/index-m.html" target="_blank" rel="noopener">
-        <span class="tag">QRQC</span>
         <div>
+          <span class="tag">03 · QRQC</span>
           <h2>Evaluación Foros QRQC</h2>
           <p>Mide la madurez de tus foros QRQC y da seguimiento a la mejora continua.</p>
         </div>
-        <span class="go">Entrar
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+        <span class="go">ENTRAR
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
         </span>
       </a>
 
-      <a class="card alt" href="https://innovacionparticipativa7-netizen.github.io/Catalogo/login.html" target="_blank" rel="noopener">
-        <span class="tag">IP</span>
+      <a class="card" href="https://innovacionparticipativa7-netizen.github.io/Catalogo/login.html" target="_blank" rel="noopener">
         <div>
+          <span class="tag">04 · IP</span>
           <h2>Ingreso | IP</h2>
           <p>Accede al catálogo de Innovación Participativa.</p>
         </div>
-        <span class="go">Entrar
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+        <span class="go">ENTRAR
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
         </span>
       </a>
 
       <a class="card" href="https://innovacionparticipativa7-netizen.github.io/Templeta-IP/" target="_blank" rel="noopener">
-        <span class="tag">TPL</span>
         <div>
+          <span class="tag">05 · TPL</span>
           <h2>Generador IP de Plantilla</h2>
           <p>Crea plantillas estandarizadas para tus proyectos de mejora.</p>
         </div>
-        <span class="go">Entrar
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+        <span class="go">ENTRAR
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
         </span>
       </a>
 
-      <a class="card alt" href="https://innovacionparticipativa7-netizen.github.io/Registro-de-evidencia-ritual/" target="_blank" rel="noopener">
-        <span class="tag">PSR</span>
+      <a class="card" href="https://innovacionparticipativa7-netizen.github.io/Registro-de-evidencia-ritual/" target="_blank" rel="noopener">
         <div>
-          <h2>Sistema de Control · Rituales | PSR | QRQC</h2>
+          <span class="tag">06 · PSR</span>
+          <h2>Sistema de Control · Rituales</h2>
           <p>Registra evidencia de rituales y da seguimiento al sistema de control.</p>
         </div>
-        <span class="go">Entrar
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+        <span class="go">ENTRAR
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
         </span>
       </a>
 
     </div>
   </main>
 
-  <footer>PANEL-IP · v1.0 · Innovación Participativa</footer>
+  <footer>
+    <span>PANEL-IP</span>
+    <span>V1.0</span>
+  </footer>
 
 </body>
 </html>
