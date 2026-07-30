@@ -3,20 +3,19 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>CI | Page </title>
+<title>Panel IP · Innovación Participativa</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500&family=Inter:wght@300;400&display=swap" rel="stylesheet">
 <style>
   :root{
-    --void:#08090C;
+    --void:#070A10;
     --panel: rgba(255,255,255,0.025);
-    --panel-hover: rgba(255,255,255,0.045);
-    --text:#E7ECEF;
-    --dim: rgba(231,236,239,0.44);
-    --line: rgba(231,236,239,0.10);
-    --cyan:#6EE7F0;
-    --violet:#8B8CF7;
+    --text:#EAF0F5;
+    --dim: rgba(234,240,245,0.46);
+    --line: rgba(234,240,245,0.10);
+    --sapphire:#2C74B3;
+    --sapphire-glow: rgba(95,168,211,0.55);
   }
 
   *{box-sizing:border-box;}
@@ -37,10 +36,10 @@
     position:fixed;
     inset:0;
     background-image:
-      linear-gradient(rgba(231,236,239,0.035) 1px, transparent 1px),
-      linear-gradient(90deg, rgba(231,236,239,0.035) 1px, transparent 1px);
+      linear-gradient(rgba(234,240,245,0.03) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(234,240,245,0.03) 1px, transparent 1px);
     background-size: 64px 64px;
-    mask-image: radial-gradient(ellipse 80% 60% at 50% 0%, black 0%, transparent 75%);
+    mask-image: radial-gradient(ellipse 70% 60% at 50% 20%, black 0%, transparent 75%);
     pointer-events:none;
     z-index:0;
   }
@@ -48,19 +47,21 @@
   header, main, footer{ position:relative; z-index:1; }
 
   header{
-    padding: 96px 24px 56px;
-    max-width: 980px;
+    padding: 72px 24px 20px;
+    max-width: 720px;
     margin: 0 auto;
+    text-align:center;
   }
 
   .eyebrow{
     display:flex;
     align-items:center;
+    justify-content:center;
     gap: 10px;
     font-family:'Space Grotesk', sans-serif;
     letter-spacing: 4px;
     font-size: 11px;
-    color: var(--cyan);
+    color: #5FA8D3;
     text-transform: uppercase;
     margin: 0 0 22px;
   }
@@ -69,23 +70,22 @@
     content:"";
     width:6px; height:6px;
     border-radius:50%;
-    background: var(--cyan);
-    box-shadow: 0 0 8px 1px var(--cyan);
+    background: #5FA8D3;
+    box-shadow: 0 0 8px 1px #5FA8D3;
   }
 
   h1{
     font-family:'Space Grotesk', sans-serif;
     font-weight: 300;
-    font-size: clamp(30px, 5.2vw, 50px);
-    line-height: 1.12;
-    margin: 0 0 20px;
-    letter-spacing: -0.5px;
-    max-width: 640px;
+    font-size: clamp(26px, 4.4vw, 40px);
+    line-height: 1.15;
+    margin: 0 0 16px;
+    letter-spacing: -0.3px;
   }
 
   h1 em{
     font-style:normal;
-    background: linear-gradient(90deg, var(--cyan), var(--violet));
+    background: linear-gradient(90deg, #5FA8D3, #0A2647);
     -webkit-background-clip: text;
     background-clip: text;
     color: transparent;
@@ -93,117 +93,129 @@
 
   header p.sub{
     color: var(--dim);
-    font-size: 15px;
+    font-size: 14.5px;
     font-weight:300;
-    max-width: 480px;
     line-height: 1.7;
-    margin: 0;
+    margin: 0 auto;
+    max-width: 460px;
   }
 
   main{
-    max-width: 980px;
+    max-width: 1080px;
     margin: 0 auto;
-    padding: 8px 24px 120px;
+    padding: 40px 24px 60px;
   }
 
-  .grid{
+  /* --- Ring nav --- */
+  .ring-wrap{
+    position: relative;
+    width: min(500px, 90vw);
+    margin: 0 auto 56px;
+    aspect-ratio: 1 / 1;
+  }
+
+  .ring-wrap svg{ width:100%; height:100%; overflow: visible; }
+
+  .segment{
+    cursor:pointer;
+    transition: transform 0.35s cubic-bezier(.2,.8,.2,1), filter 0.35s ease;
+    transform-box: fill-box;
+    transform-origin: center;
+  }
+
+  .segment path{ transition: filter 0.35s ease; }
+
+  .segment:hover, .segment:focus-visible{
+    transform: scale(1.045);
+    filter: drop-shadow(0 0 14px var(--sapphire-glow));
+    outline:none;
+  }
+
+  .seg-label{
+    font-family:'Space Grotesk', sans-serif;
+    fill: rgba(255,255,255,0.92);
+    font-size: 13px;
+    letter-spacing: 1px;
+    text-anchor: middle;
+    dominant-baseline: middle;
+    pointer-events:none;
+  }
+
+  .seg-num{
+    font-family:'Space Grotesk', sans-serif;
+    fill: rgba(255,255,255,0.55);
+    font-size: 9.5px;
+    letter-spacing: 1.5px;
+    text-anchor: middle;
+    dominant-baseline: middle;
+    pointer-events:none;
+  }
+
+  .center-circle{
+    fill: var(--void);
+    stroke: var(--line);
+    stroke-width: 1;
+  }
+
+  .center-text{
+    font-family:'Space Grotesk', sans-serif;
+    fill: var(--text);
+    text-anchor: middle;
+    dominant-baseline: middle;
+    pointer-events:none;
+  }
+
+  .center-title{ font-size: 26px; font-weight:400; letter-spacing: 1px; }
+  .center-sub{ font-size: 9px; fill: rgba(234,240,245,0.4); letter-spacing: 3px; }
+
+  .pulse{
+    fill:none;
+    stroke: #5FA8D3;
+    stroke-width: 1;
+    opacity: 0.5;
+  }
+
+  /* --- Legend list (accessible fallback + full names) --- */
+  .legend{
     display:grid;
-    grid-template-columns: repeat(auto-fit, minmax(270px, 1fr));
+    grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
     gap: 1px;
     background: var(--line);
     border: 1px solid var(--line);
+    max-width: 900px;
+    margin: 0 auto;
   }
 
-  .card{
-    position: relative;
-    display:flex;
-    flex-direction: column;
-    justify-content: space-between;
-    background: var(--void);
-    padding: 30px 26px 26px;
-    min-height: 176px;
-    text-decoration: none;
-    color: var(--text);
-    overflow: hidden;
-    transition: background 0.25s ease;
-  }
-
-  .card:hover{ background: var(--panel-hover); }
-
-  .card:focus-visible{
-    outline: 1px solid var(--cyan);
-    outline-offset: -1px;
-  }
-
-  .card::before, .card::after{
-    content:"";
-    position:absolute;
-    width:10px; height:10px;
-    border-style:solid;
-    border-color: transparent;
-    opacity:0;
-    transition: opacity 0.25s ease, border-color 0.25s ease;
-  }
-  .card::before{
-    top:10px; left:10px;
-    border-width: 1px 0 0 1px;
-  }
-  .card::after{
-    bottom:10px; right:10px;
-    border-width: 0 1px 1px 0;
-  }
-  .card:hover::before, .card:hover::after{
-    opacity:1;
-    border-color: var(--cyan);
-  }
-
-  .tag{
-    font-family:'Space Grotesk', sans-serif;
-    font-size: 11px;
-    letter-spacing: 2px;
-    color: var(--cyan);
-    margin-bottom: 20px;
-    display:inline-block;
-  }
-
-  .card h2{
-    font-family:'Space Grotesk', sans-serif;
-    font-size: 19px;
-    font-weight: 400;
-    margin: 0 0 10px;
-    letter-spacing: -0.2px;
-  }
-
-  .card p{
-    margin: 0;
-    font-size: 13.5px;
-    font-weight:300;
-    color: var(--dim);
-    line-height: 1.6;
-  }
-
-  .card .go{
-    margin-top: 22px;
-    font-family:'Space Grotesk', sans-serif;
-    font-size: 12px;
-    letter-spacing: 1px;
-    color: var(--text);
+  .legend a{
     display:flex;
     align-items:center;
-    gap: 8px;
-    opacity: 0.55;
-    transition: opacity 0.25s ease, gap 0.25s ease;
+    gap: 14px;
+    background: var(--void);
+    padding: 16px 18px;
+    text-decoration: none;
+    color: var(--text);
+    font-size: 13.5px;
+    transition: background 0.2s ease;
   }
 
-  .card:hover .go{ opacity:1; color: var(--cyan); }
-  .card .go svg{ width:12px; height:12px; transition: transform 0.25s ease; }
-  .card:hover .go svg{ transform: translateX(4px); }
+  .legend a:hover{ background: rgba(95,168,211,0.06); }
+  .legend a:hover .chip{ box-shadow: 0 0 8px 1px var(--sapphire-glow); }
+
+  .chip{
+    width: 10px; height:10px;
+    border-radius:2px;
+    flex-shrink:0;
+    transition: box-shadow 0.2s ease;
+  }
+
+  .legend .name{ font-family:'Space Grotesk', sans-serif; font-weight:400; }
+  .legend small{ display:block; color: var(--dim); font-size: 11.5px; margin-top:2px; font-weight:300; }
 
   footer{
-    max-width: 980px;
+    max-width: 1080px;
     margin: 0 auto;
     padding: 0 24px 56px;
-    color: rgba(231,236,239,0.28);
+    color: rgba(234,240,245,0.28);
     font-size: 11px;
     font-family:'Space Grotesk', sans-serif;
     letter-spacing: 1.5px;
@@ -212,89 +224,110 @@
   }
 
   @media (prefers-reduced-motion: reduce){
-    .card{ transition: none; }
+    .segment{ transition:none; }
   }
 </style>
 </head>
 <body>
 
   <header>
-    <p class="eyebrow">CONTINUOUS IMPROVEMENT</p>
-    <h1>Panel de acceso a los <em>sistemas</em> de mejora continua.</h1>
-    <p class="sub">Selecciona una estación para continuar. Cada acceso te lleva directo a su plataforma.</p>
+    <p class="eyebrow">Innovación Participativa</p>
+    <h1>Un <em>anillo</em> de acceso a tus sistemas de mejora continua.</h1>
+    <p class="sub">Selecciona un segmento del anillo, o elige tu estación en la lista de abajo.</p>
   </header>
 
   <main>
-    <div class="grid">
 
-      <a class="card" href="https://innovacionparticipativa7-netizen.github.io/ProyectScore/" target="_blank" rel="noopener">
-        <div>
-          <span class="tag">01 · PSR</span>
-          <h2>Login</h2>
-          <p>Acceso a la calificacion de proyectos.</p>
-        </div>
-        <span class="go">ENTRAR
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
-        </span>
-      </a>
+    <div class="ring-wrap">
+      <svg viewBox="0 0 500 500">
 
-      <a class="card" href="https://innovacionparticipativa7-netizen.github.io/5Ss-auditoria/auditoria_5s.html" target="_blank" rel="noopener">
-        <div>
-          <span class="tag">02 · 5S</span>
-          <h2>Auditoría 5S</h2>
-          <p>Registra y evalúa el cumplimiento de las 5S en tu área de trabajo.</p>
-        </div>
-        <span class="go">ENTRAR
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
-        </span>
-      </a>
+        <circle class="pulse" cx="250" cy="250" r="230"/>
 
-      <a class="card" href="https://innovacionparticipativa7-netizen.github.io/QRQC-Maturity/index-m.html" target="_blank" rel="noopener">
-        <div>
-          <span class="tag">03 · QRQC</span>
-          <h2>Evaluación Foros QRQC</h2>
-          <p>Mide la madurez de tus foros QRQC y da seguimiento a la mejora continua.</p>
-        </div>
-        <span class="go">ENTRAR
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
-        </span>
-      </a>
+        <!-- Segment 1: LOGIN -->
+        <a class="segment" href="https://innovacionparticipativa7-netizen.github.io/ProyectScore/" target="_blank" rel="noopener" aria-label="Login">
+          <path d="M 257.33,40.13 A 210,210 0 0 1 428.09,138.72 L 334.80,197.01 A 100,100 0 0 0 253.49,150.06 Z" fill="#5FA8D3"/>
+          <text class="seg-num" x="327.5" y="102">01</text>
+          <text class="seg-label" x="327.5" y="122">LOGIN</text>
+        </a>
 
-      <a class="card" href="https://innovacionparticipativa7-netizen.github.io/Catalogo/login.html" target="_blank" rel="noopener">
-        <div>
-          <span class="tag">04 · IP</span>
-          <h2>Catalogo IP</h2>
-          <p>Accede al catálogo de Innovación Participativa.</p>
-        </div>
-        <span class="go">ENTRAR
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
-        </span>
-      </a>
+        <!-- Segment 2: 5S -->
+        <a class="segment" href="https://innovacionparticipativa7-netizen.github.io/5Ss-auditoria/auditoria_5s.html" target="_blank" rel="noopener" aria-label="Auditoría 5S">
+          <path d="M 435.42,151.41 A 210,210 0 0 1 435.42,348.59 L 338.29,296.95 A 100,100 0 0 0 338.29,203.05 Z" fill="#4E8EB7"/>
+          <text class="seg-num" x="405" y="237">02</text>
+          <text class="seg-label" x="405" y="257">5S</text>
+        </a>
 
-      <a class="card" href="https://innovacionparticipativa7-netizen.github.io/Templeta-IP/" target="_blank" rel="noopener">
-        <div>
-          <span class="tag">05 · TPL</span>
-          <h2>Generador de Plantillas IP</h2>
-          <p>Crea plantillas estandarizadas para tus proyectos de mejora.</p>
-        </div>
-        <span class="go">ENTRAR
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
-        </span>
-      </a>
+        <!-- Segment 3: QRQC -->
+        <a class="segment" href="https://innovacionparticipativa7-netizen.github.io/QRQC-Maturity/index-m.html" target="_blank" rel="noopener" aria-label="Evaluación Foros QRQC">
+          <path d="M 428.09,361.28 A 210,210 0 0 1 257.33,459.87 L 253.49,349.94 A 100,100 0 0 0 334.80,302.99 Z" fill="#3D749B"/>
+          <text class="seg-num" x="327.5" y="370">03</text>
+          <text class="seg-label" x="327.5" y="390">QRQC</text>
+        </a>
 
-      <a class="card" href="https://innovacionparticipativa7-netizen.github.io/Registro-de-evidencia-ritual/" target="_blank" rel="noopener">
-        <div>
-          <span class="tag">06 · PSR</span>
-          <h2>Asistencia</h2>
-          <p>Registra evidencia de rituales, QRQC y Proyectos.</p>
-        </div>
-        <span class="go">ENTRAR
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
-        </span>
-      </a>
+        <!-- Segment 4: IP (Catálogo) -->
+        <a class="segment" href="https://innovacionparticipativa7-netizen.github.io/Catalogo/login.html" target="_blank" rel="noopener" aria-label="Ingreso IP">
+          <path d="M 242.67,459.87 A 210,210 0 0 1 71.91,361.28 L 165.20,302.99 A 100,100 0 0 0 246.51,349.94 Z" fill="#2C5A7F"/>
+          <text class="seg-num" x="172.5" y="370">04</text>
+          <text class="seg-label" x="172.5" y="390">IP</text>
+        </a>
 
+        <!-- Segment 5: TPL -->
+        <a class="segment" href="https://innovacionparticipativa7-netizen.github.io/Templeta-IP/" target="_blank" rel="noopener" aria-label="Generador IP de Plantilla">
+          <path d="M 64.58,348.59 A 210,210 0 0 1 64.58,151.41 L 161.71,203.05 A 100,100 0 0 0 161.71,296.95 Z" fill="#1B4063"/>
+          <text class="seg-num" x="95" y="237">05</text>
+          <text class="seg-label" x="95" y="257">TPL</text>
+        </a>
+
+        <!-- Segment 6: PSR -->
+        <a class="segment" href="https://innovacionparticipativa7-netizen.github.io/Registro-de-evidencia-ritual/" target="_blank" rel="noopener" aria-label="Sistema de Control Rituales">
+          <path d="M 71.91,138.72 A 210,210 0 0 1 242.67,40.13 L 246.51,150.06 A 100,100 0 0 0 165.20,197.01 Z" fill="#0A2647"/>
+          <text class="seg-num" x="172.5" y="102">06</text>
+          <text class="seg-label" x="172.5" y="122">PSR</text>
+        </a>
+
+        <circle class="center-circle" cx="250" cy="250" r="96"/>
+        <text class="center-text center-title" x="250" y="243">IP</text>
+        <text class="center-text center-sub" x="250" y="266">ACCESO</text>
+
+      </svg>
     </div>
+
+    <div class="legend">
+      <a href="https://innovacionparticipativa7-netizen.github.io/ProyectScore/" target="_blank" rel="noopener">
+        <span class="chip" style="background:#5FA8D3"></span>
+        <span><span class="name">Login</span><small>Acceso general a la plataforma</small></span>
+      </a>
+      <a href="https://innovacionparticipativa7-netizen.github.io/5Ss-auditoria/auditoria_5s.html" target="_blank" rel="noopener">
+        <span class="chip" style="background:#4E8EB7"></span>
+        <span><span class="name">Auditoría 5S</span><small>Evaluación de cumplimiento 5S</small></span>
+      </a>
+      <a href="https://innovacionparticipativa7-netizen.github.io/QRQC-Maturity/index-m.html" target="_blank" rel="noopener">
+        <span class="chip" style="background:#3D749B"></span>
+        <span><span class="name">Evaluación Foros QRQC</span><small>Madurez de foros QRQC</small></span>
+      </a>
+      <a href="https://innovacionparticipativa7-netizen.github.io/Catalogo/login.html" target="_blank" rel="noopener">
+        <span class="chip" style="background:#2C5A7F"></span>
+        <span><span class="name">Ingreso | IP</span><small>Catálogo de Innovación Participativa</small></span>
+      </a>
+      <a href="https://innovacionparticipativa7-netizen.github.io/Templeta-IP/" target="_blank" rel="noopener">
+        <span class="chip" style="background:#1B4063"></span>
+        <span><span class="name">Generador IP de Plantilla</span><small>Plantillas estandarizadas</small></span>
+      </a>
+      <a href="https://innovacionparticipativa7-netizen.github.io/Registro-de-evidencia-ritual/" target="_blank" rel="noopener">
+        <span class="chip" style="background:#0A2647"></span>
+        <span><span class="name">Sistema de Control · Rituales</span><small>Registro de evidencia PSR | QRQC</small></span>
+      </a>
+    </div>
+
   </main>
+
+  <footer>
+    <span>PANEL-IP</span>
+    <span>V2.0</span>
+  </footer>
+
+</body>
+</html>
 
 </body>
 </html>
