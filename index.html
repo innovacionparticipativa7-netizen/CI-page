@@ -508,6 +508,60 @@
       </div>
     </section>
 
+    <!-- ===================== APARTADO ASISTENCIA ===================== -->
+    <section class="seccion" id="seccion-asistencia" aria-labelledby="titulo-asistencia">
+      <div class="seccion-head">
+        <div>
+          <p class="seccion-tag">06 · Asistencia</p>
+          <h2 id="titulo-asistencia">Registro de asistencia y rituales</h2>
+        </div>
+        <div class="acciones">
+          <button class="btn" id="btnActualizarAsis" type="button">Actualizar datos</button>
+        </div>
+      </div>
+
+      <div class="graficos">
+        <article class="card-graf">
+          <h3>Asistencias por semana</h3>
+          <p class="desc">Total de asistencias registradas a foros QRQC y a revisiones PSR.</p>
+          <div class="lienzo">
+            <canvas id="graficoAsisSemana" role="img" aria-label="Asistencias registradas por semana, QRQC y PSR"></canvas>
+          </div>
+          <p class="estado" id="estadoAsistencia">Cargando…</p>
+        </article>
+
+        <article class="card-graf">
+          <h3>Rituales registrados</h3>
+          <p class="desc">Áreas que registraron su ritual con evidencia cada semana, contra el total de áreas.</p>
+          <div class="lienzo">
+            <canvas id="graficoAsisRituales" role="img" aria-label="Rituales registrados por semana"></canvas>
+          </div>
+        </article>
+      </div>
+
+      <article class="card-graf" style="margin-top:20px">
+        <div class="card-top">
+          <div>
+            <h3>Asistencia QRQC por foro</h3>
+            <p class="desc">Asistencias registradas en cada foro durante la semana elegida. Los foros sin registros aparecen en 0.</p>
+          </div>
+          <div class="acciones">
+            <select class="selector" id="asisNivel" aria-label="Nivel de foro">
+              <option value="">Todos los niveles</option>
+              <option value="N1">N1</option>
+              <option value="N2">N2</option>
+              <option value="N3">N3</option>
+            </select>
+            <select class="selector" id="asisSemana" aria-label="Semana"></select>
+          </div>
+        </div>
+        <div class="lienzo" id="lienzoAsisForos">
+          <canvas id="graficoAsisForos" role="img" aria-label="Asistencias por foro QRQC en la semana elegida"></canvas>
+        </div>
+        <p class="estado" id="estadoAsisForos"></p>
+      </article>
+    </section>
+
   </main>
 
   <!-- Editor de metas semanales -->
@@ -542,7 +596,8 @@
     ipVisitas:    3 * HORA,   // registros nuevos de "ingresos" del Catálogo IP
     ipInventario: 12 * HORA,  // valor del catálogo y puntos por cobrar (lee productos y usuarios)
     qrqc:         1 * HORA,   // evaluaciones QRQC de la semana en curso
-    proyectos:    6 * HORA    // historial del Panel de Proyectos (solo si su base permite leer sin sesión)
+    proyectos:    6 * HORA,   // historial del Panel de Proyectos (solo si su base permite leer sin sesión)
+    asistencias:  3 * HORA    // registros nuevos de asistencias QRQC, PSR y rituales
   };
   const BLOQUEO_MS = 2 * 60 * 1000;   // evita que dos personas actualicen lo mismo a la vez
 
@@ -567,6 +622,15 @@
   const META_PROY_EVALUADOR = 8;    // proyectos por evaluador por semana
 
   const QRQC_INICIO = '2026-W32';
+  // Forma de contar (igual que la página de Evaluación QRQC):
+  const QRQC_CONTAR_REEVALUACIONES = true;   // true: cada evaluación cuenta; false: un foro cuenta 1 vez por semana
+  const QRQC_SIN_NIVEL_COMO_BASICO = true;   // true: si no completa Básico, se cuenta como Básico
+  // Cambia si cambia la forma de contar, para que el resumen guardado se recalcule completo.
+  const QRQC_VERSION = 'v2-' + QRQC_CONTAR_REEVALUACIONES + '-' + QRQC_SIN_NIVEL_COMO_BASICO;
+
+  // Apartado Asistencia (Sistema de Control - Rituales | PSR | QRQC)
+  const ASIS_INICIO = '2026-W32';
+  const ASIS_META_RITUALES = 21;    // número de áreas que deben registrar su ritual cada semana
   const METAS_QRQC = { TOTAL: 33, N1: 19, N2: 13, N3: 1 };
 
   /* ================= FIREBASE ================= */
@@ -590,6 +654,11 @@
     authDomain: "panel-proyectos-f119f.firebaseapp.com",
     projectId: "panel-proyectos-f119f"
   }, 'psr').firestore();
+
+  const dbAsis = firebase.initializeApp({
+    apiKey: "AIzaSyB4VtXbaJrPb2Rg9DxRguVvhQXtiCONPc0",
+    projectId: "registro-de-evidencia-ip"
+  }, 'asistencia').firestore();
 
   const FS = firebase.firestore;
   const RESUMEN =dbQ.collection('tableroCI').doc('resumen');
@@ -795,6 +864,62 @@
     resumen.proyectos = nuevo;
   });
 
+  /* ================= TAREA: ASISTENCIAS Y RITUALES ================= */
+  // La primera vez lee los registros desde la semana de inicio; después solo los nuevos.
+  // Guarda por semana: asistencias QRQC, PSR, rituales y asistencias por foro.
+  const COLECCIONES_ASIS = [['asistenciasQRQC', 'QRQC'], ['asistenciasPSR', 'PSR'], ['rituales', 'RIT']];
+  const tareaAsistencias = forzar => ejecutar('asistencias', forzar, async () => {
+    const previo = resumen.asistencias || {};
+    const completa = !previo.semanas || previo.inicio !== ASIS_INICIO;
+    const cols = completa ? {} : { ...(previo.cols || {}) };
+    const semanas = completa ? {} : JSON.parse(JSON.stringify(previo.semanas || {}));
+    const inicio = FS.Timestamp.fromDate(lunesDe(ASIS_INICIO));
+
+    const [forosSnap, ...snaps] = await Promise.all([
+      dbAsis.collection('forosQRQC').get(),
+      ...COLECCIONES_ASIS.map(([col]) =>
+        dbAsis.collection(col).where('fecha', '>=', cols[col]?.hasta || inicio).get())
+    ]);
+
+    // Foros que ya no están en la lista conservan su nombre (marcados como eliminados).
+    const foros = {};
+    for (const [id, f] of Object.entries(completa ? {} : previo.foros || {})) foros[id] = { ...f, eliminado: true };
+    forosSnap.forEach(d => { const x = d.data(); foros[d.id] = { nombre: x.nombre || '—', nivel: x.nivel || '' }; });
+
+    let nuevos = 0;
+    COLECCIONES_ASIS.forEach(([col, tipo], i) => {
+      const c = cols[col] || {};
+      const yaContados = new Set(c.idsEnHasta || []);
+      let hasta = c.hasta ? c.hasta.toDate() : null;
+      let enHasta = new Set(c.idsEnHasta || []);
+      snaps[i].docs.forEach(doc => {
+        if (yaContados.has(doc.id)) return;
+        const x = doc.data(), f = fechaDe(x.fecha);
+        if (!f) return;
+        const s = semanaISO(f);
+        if (s < ASIS_INICIO) return;
+        nuevos++;
+        const w = semanas[s] || (semanas[s] = { QRQC: 0, PSR: 0, RIT: 0, foros: {} });
+        w[tipo] = (w[tipo] || 0) + 1;
+        if (tipo === 'QRQC') {
+          const id = x.foroId || x.foroNombre || '—';
+          w.foros = w.foros || {};
+          w.foros[id] = (w.foros[id] || 0) + 1;
+          // Foros eliminados de la lista: se conserva el nombre que trae el registro.
+          if (!foros[id]) foros[id] = { nombre: x.foroNombre || '—', nivel: x.foroNivel || '', eliminado: true };
+        }
+        if (!hasta || f > hasta) { hasta = f; enHasta = new Set([doc.id]); }
+        else if (+f === +hasta) enHasta.add(doc.id);
+      });
+      cols[col] = { hasta: hasta ? FS.Timestamp.fromDate(hasta) : null, idsEnHasta: [...enHasta] };
+    });
+
+    const nuevo = { inicio: ASIS_INICIO, cols, semanas, foros };
+    await terminar('asistencias', { asistencias: nuevo });
+    resumen.asistencias = nuevo;
+    return nuevos;
+  });
+
   /* ================= TAREA: EVALUACIONES QRQC ================= */
   const ORDEN_NIVELES = ['BASICO', 'BRONCE', 'PLATA', 'ORO'];
   function fechaEval(e) {
@@ -810,13 +935,13 @@
       const total = secs.filter(s => s.niveles && s.niveles.some(n => n.nivel === lev)).length;
       if (total > 0 && (lt[lev] || 0) === total) alcanzado = lev;
     }
-    return alcanzado || 'SIN';
+    return alcanzado || (QRQC_SIN_NIVEL_COMO_BASICO ? 'BASICO' : 'SIN');
   }
   // Las semanas cerradas quedan guardadas; solo se vuelven a leer las evaluaciones
   // desde la semana de la última actualización.
   const tareaQRQC = forzar => ejecutar('qrqc', forzar, async () => {
     const previo = resumen.qrqc || {};
-    const completa = !previo.conteos || previo.inicio !== QRQC_INICIO;
+    const completa = !previo.conteos || previo.inicio !== QRQC_INICIO || previo.version !== QRQC_VERSION;
     const desde = completa ? QRQC_INICIO : (previo.ultimaSemana > QRQC_INICIO ? previo.ultimaSemana : QRQC_INICIO);
 
     const snap = await dbQ.collection('evaluations')
@@ -831,7 +956,8 @@
       const sem = semanaISO(f);
       if (sem < desde) return;
       const nf = ['N1', 'N2', 'N3'].includes(e.nivelForo) ? e.nivelForo : 'N1';
-      const key = sem + '|' + nf + '|' + (e.foro || '—');
+      // Con reevaluaciones, cada documento es su propia entrada; sin ellas, se agrupa por foro y semana.
+      const key = QRQC_CONTAR_REEVALUACIONES ? doc.id : sem + '|' + nf + '|' + (e.foro || '—');
       if (!ultimas[key] || f > ultimas[key].f) ultimas[key] = { f, sem, nf, nivel: nivelAlcanzado(e) };
     });
 
@@ -846,7 +972,7 @@
         s[x.nivel] = (s[x.nivel] || 0) + 1;
       }
     }
-    const nuevo = { inicio: QRQC_INICIO, ultimaSemana: semanaHoy(), conteos };
+    const nuevo = { inicio: QRQC_INICIO, version: QRQC_VERSION, ultimaSemana: semanaHoy(), conteos };
     await terminar('qrqc', { qrqc: nuevo });
     resumen.qrqc = nuevo;
   });
@@ -1002,7 +1128,8 @@
         interaction: { mode: 'index', intersect: false },
         layout: { padding: { top: 18 } },
         plugins: {
-          legend: { display: conLeyenda, position: 'bottom', labels: { usePointStyle: true, boxWidth: 8, padding: 16 } },
+          legend: { display: conLeyenda, position: 'bottom', labels: { usePointStyle: true, boxWidth: 8, padding: 16,
+            filter: item => !(QRQC_SIN_NIVEL_COMO_BASICO && item.text === 'Sin nivel') } },
           tooltip: { ...tooltipBase,
             filter: i => i.dataset.type === 'line' || i.parsed.y > 0,
             callbacks: {
@@ -1033,7 +1160,9 @@
       NIVELES.forEach((n, i) => { chart.data.datasets[i + 1].data = semanas.map(s => porSemana[s]?.[n.k] || 0); });
       chart.update();
     }
-    if (q) ponerEstado('estadoQRQC', 'Si un foro se evaluó varias veces en la semana, cuenta una vez con su última evaluación. '
+    if (q) ponerEstado('estadoQRQC', (QRQC_CONTAR_REEVALUACIONES
+        ? 'Cuenta cada evaluación registrada, igual que la página de Evaluación QRQC. '
+        : 'Si un foro se evaluó varias veces en la semana, cuenta una vez con su última evaluación. ')
       + 'No incluye Líderes y Supervisores. Actualizado el ' + fechaTexto(ultimaActualizacion('qrqc'))
       + '; se revisa cada ' + CADA.qrqc / HORA + ' h.');
   }
@@ -1103,6 +1232,104 @@
       : 'Aún no hay datos: un administrador debe abrir una vez el Panel de Proyectos (versión actualizada) para publicarlos.');
   }
 
+  /* ================= GRÁFICOS ASISTENCIA ================= */
+  const COLOR_NIVEL = { N1: '#5FA8D3', N2: '#2C74B3', N3: '#E0B43C' };
+
+  const graficoAsisSemana = new Chart(document.getElementById('graficoAsisSemana'), {
+    data: { labels: [], datasets: [
+      { type: 'bar', label: 'Asistencias QRQC', data: [], backgroundColor: '#5FA8D3', stack: 'a', borderRadius: 2, maxBarThickness: 34,
+        datalabels: { display: c => (c.dataset.data[c.dataIndex] || 0) > 0, color: '#0D121B', font: { size: 10, weight: 500 }, formatter: fmt } },
+      { type: 'bar', label: 'Asistencias PSR', data: [], backgroundColor: '#2C74B3', stack: 'a', borderRadius: 2, maxBarThickness: 34,
+        datalabels: { display: c => (c.dataset.data[c.dataIndex] || 0) > 0, color: '#EAF0F5', font: { size: 10, weight: 500 }, formatter: fmt } }
+    ] },
+    plugins: [totalesPlugin],
+    options: { ...opcionesBase,
+      layout: { padding: { top: 18 } },
+      plugins: { ...opcionesBase.plugins,
+        tooltip: { ...tooltipBase, callbacks: {
+          label: c => ' ' + c.dataset.label + ': ' + fmt(c.parsed.y),
+          footer: items => 'Total: ' + fmt(items.reduce((n, i) => n + i.parsed.y, 0)) } } },
+      scales: { x: { stacked: true, grid: { display: false } },
+                y: { stacked: true, beginAtZero: true, grace: '10%', ticks: { precision: 0, callback: v => fmt(v) } } } }
+  });
+
+  const graficoAsisRituales = graficoBarrasMeta('graficoAsisRituales', 'Rituales registrados', ASIS_META_RITUALES);
+
+  const graficoAsisForos = new Chart(document.getElementById('graficoAsisForos'), {
+    type: 'bar',
+    data: { labels: [], datasets: [
+      { label: 'Asistencias', data: [], backgroundColor: [], borderRadius: 3, maxBarThickness: 18,
+        datalabels: { display: true, anchor: 'end', align: 'end', offset: 4, color: '#EAF0F5',
+          font: { size: 11, weight: 500 }, formatter: v => fmt(v || 0) } }
+    ] },
+    options: {
+      indexAxis: 'y',
+      responsive: true,
+      maintainAspectRatio: false,
+      layout: { padding: { right: 28 } },
+      plugins: {
+        legend: { display: false },
+        tooltip: { ...tooltipBase, callbacks: { label: c => ' Asistencias: ' + fmt(c.parsed.x) } }
+      },
+      scales: {
+        x: { beginAtZero: true, grace: '8%', ticks: { precision: 0 } },
+        y: { grid: { display: false }, ticks: { autoSkip: false, font: { size: 11 } } }
+      }
+    }
+  });
+
+  const selAsisSemana = document.getElementById('asisSemana');
+  const selAsisNivel = document.getElementById('asisNivel');
+  selAsisSemana.addEventListener('change', () => pintarAsistencias());
+  selAsisNivel.addEventListener('change', () => pintarAsistencias());
+
+  function pintarAsistencias() {
+    const a = resumen.asistencias;
+    const datos = a?.semanas || {};
+    const semanas = semanasEntre(ASIS_INICIO, semanaHoy());
+    const labels = semanas.map(etiqueta);
+
+    graficoAsisSemana.data.labels = labels;
+    graficoAsisSemana.data.datasets[0].data = semanas.map(s => datos[s]?.QRQC || 0);
+    graficoAsisSemana.data.datasets[1].data = semanas.map(s => datos[s]?.PSR || 0);
+    graficoAsisSemana.update();
+
+    graficoAsisRituales.data.labels = labels;
+    graficoAsisRituales.data.datasets[0].data = semanas.map(() => ASIS_META_RITUALES);
+    graficoAsisRituales.data.datasets[1].data = semanas.map(s => datos[s]?.RIT || 0);
+    graficoAsisRituales.update();
+
+    // Selector de semana, la más reciente primero.
+    const elegida = selAsisSemana.value || semanaHoy();
+    if (selAsisSemana.options.length !== semanas.length) {
+      selAsisSemana.replaceChildren(...[...semanas].reverse().map(s => new Option(etiqueta(s), s)));
+    }
+    selAsisSemana.value = semanas.includes(elegida) ? elegida : semanaHoy();
+
+    // Foros: los vigentes (aunque tengan 0) y los eliminados solo si tuvieron asistencias esa semana.
+    const porForo = datos[selAsisSemana.value]?.foros || {};
+    const nivel = selAsisNivel.value;
+    const orden = { N1: 1, N2: 2, N3: 3 };
+    const lista = Object.entries(a?.foros || {})
+      .filter(([id, f]) => (!f.eliminado || porForo[id]) && (!nivel || f.nivel === nivel))
+      .sort(([, x], [, y]) => (orden[x.nivel] || 9) - (orden[y.nivel] || 9) || String(x.nombre).localeCompare(String(y.nombre), 'es'));
+
+    document.getElementById('lienzoAsisForos').style.height = Math.max(240, lista.length * 26 + 50) + 'px';
+    graficoAsisForos.data.labels = lista.map(([, f]) => (f.nivel ? f.nivel + ' · ' : '') + f.nombre);
+    graficoAsisForos.data.datasets[0].data = lista.map(([id]) => porForo[id] || 0);
+    graficoAsisForos.data.datasets[0].backgroundColor = lista.map(([, f]) => COLOR_NIVEL[f.nivel] || '#9AA7B4');
+    graficoAsisForos.resize();
+    graficoAsisForos.update();
+
+    const total = lista.reduce((n, [id]) => n + (porForo[id] || 0), 0);
+    const sinAsistencia = lista.filter(([id]) => !porForo[id]).length;
+    ponerEstado('estadoAsisForos', a
+      ? fmt(total) + ' asistencias en ' + etiqueta(selAsisSemana.value) + '. ' + sinAsistencia + ' de ' + lista.length + ' foros sin registros.'
+      : '');
+    if (a) ponerEstado('estadoAsistencia', 'Actualizado el ' + fechaTexto(ultimaActualizacion('asistencias'))
+      + '; se revisan registros nuevos cada ' + CADA.asistencias / HORA + ' h.');
+  }
+
   /* ================= EJECUCIÓN ================= */
   async function correr(tarea, funcion, forzar, pintar, idEstado, fuente) {
     try {
@@ -1139,8 +1366,15 @@
     }
     pintarProyectos();
   };
-  const tareasQRQC = forzar =>
-    (forzar || vencida('qrqc')) && correr('qrqc', tareaQRQC, forzar, pintarQRQC, 'estadoQRQC', 'QRQC');
+  const tareasAsistencias = forzar =>
+    (forzar || vencida('asistencias'))
+      && correr('asistencias', tareaAsistencias, forzar, pintarAsistencias, 'estadoAsistencia', 'Registro de Asistencia');
+  const tareasQRQC = forzar => {
+    // Si cambió la forma de contar, recalcular de inmediato aunque el resumen esté vigente.
+    const forzarVersion = !!resumen.qrqc && resumen.qrqc.version !== QRQC_VERSION;
+    return (forzar || forzarVersion || vencida('qrqc'))
+      && correr('qrqc', tareaQRQC, forzar || forzarVersion, pintarQRQC, 'estadoQRQC', 'QRQC');
+  };
 
   async function iniciar() {
     try {
@@ -1148,14 +1382,14 @@
       resumen = s.exists ? s.data() : {};
     } catch (error) {
       console.error(error);
-      for (const id of ['estadoProyectos', 'estadoVisitasIP', 'estadoInventarioIP', 'estadoQRQC']) ponerEstado(id, mensajeError(error, 'QRQC'), true);
+      for (const id of ['estadoProyectos', 'estadoVisitasIP', 'estadoInventarioIP', 'estadoQRQC', 'estadoAsistencia']) ponerEstado(id, mensajeError(error, 'QRQC'), true);
       return;
     }
     try { await prepararResumen(); } catch (error) { console.error(error); }
     resumen.ipSemanas = resumen.ipSemanas || { semanas: {}, metas: {} };
     resumen.ipSemanas.semanas = resumen.ipSemanas.semanas || {};
-    pintarProyectos(); pintarVisitas(); pintarInventario(); pintarQRQC();
-    await Promise.all([tareasProyectos(false), tareasIP(false), tareasQRQC(false)]);
+    pintarProyectos(); pintarVisitas(); pintarInventario(); pintarQRQC(); pintarAsistencias();
+    await Promise.all([tareasProyectos(false), tareasIP(false), tareasQRQC(false), tareasAsistencias(false)]);
   }
 
   // Botones "Actualizar datos": consultan las fuentes aunque el resumen esté vigente.
@@ -1166,6 +1400,14 @@
     await tareasIP(true);
     pintarVisitas(); pintarInventario();
     btnIP.disabled = false;
+  });
+  const btnAsis = document.getElementById('btnActualizarAsis');
+  btnAsis.addEventListener('click', async () => {
+    btnAsis.disabled = true;
+    ponerEstado('estadoAsistencia', 'Actualizando…');
+    await tareasAsistencias(true);
+    pintarAsistencias();
+    btnAsis.disabled = false;
   });
   const btnQ = document.getElementById('btnActualizarQRQC');
   btnQ.addEventListener('click', async () => {
