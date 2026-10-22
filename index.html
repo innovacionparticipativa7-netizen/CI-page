@@ -255,6 +255,20 @@
   }
   .selector:focus{ outline:none; border-color: var(--sky); }
 
+  /* --- Cumplimiento de rituales --- */
+  .cumplimiento{ margin-top: 18px; padding-top: 16px; border-top: 1px solid var(--line); }
+  .cump-head{ display:flex; justify-content:space-between; align-items:baseline; gap:10px; margin-bottom:8px; flex-wrap:wrap; }
+  .cump-head span{ color: var(--dim); font-size: 12.5px; }
+  .cump-head strong{ font: 500 22px 'Space Grotesk', sans-serif; }
+  .barra{ height: 8px; border-radius: 999px; background: rgba(234,240,245,0.08); overflow:hidden; }
+  .barra > div{ height:100%; border-radius: 999px; background: var(--sky); transition: width .4s ease; }
+  .areas{ display:grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 6px 14px; margin-top: 14px; }
+  .area{ display:flex; align-items:center; gap:8px; font-size: 12px; color: var(--dim); min-width:0; }
+  .area span{ overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .area.ok{ color: var(--text); }
+  .punto{ width:8px; height:8px; border-radius:50%; flex-shrink:0; background:#D0574B; }
+  .area.ok .punto{ background:#4FB286; box-shadow: 0 0 6px rgba(79,178,134,.6); }
+
   .card-graf{
     background: var(--panel);
     border: 1px solid var(--line);
@@ -531,10 +545,23 @@
         </article>
 
         <article class="card-graf">
-          <h3>Rituales registrados</h3>
-          <p class="desc">Áreas que registraron su ritual con evidencia cada semana, contra el total de áreas.</p>
-          <div class="lienzo">
-            <canvas id="graficoAsisRituales" role="img" aria-label="Rituales registrados por semana"></canvas>
+          <div class="card-top">
+            <div>
+              <h3>Cumplimiento de rituales</h3>
+              <p class="desc">Porcentaje de áreas que registraron su ritual con evidencia cada semana.</p>
+            </div>
+            <select class="selector" id="ritSemana" aria-label="Semana del semáforo"></select>
+          </div>
+          <div class="lienzo chico">
+            <canvas id="graficoAsisRituales" role="img" aria-label="Porcentaje de cumplimiento de rituales por semana"></canvas>
+          </div>
+          <div class="cumplimiento">
+            <div class="cump-head">
+              <span id="ritTitulo">Cumplimiento</span>
+              <strong id="ritPct">—</strong>
+            </div>
+            <div class="barra"><div id="ritBarra" style="width:0%"></div></div>
+            <div class="areas" id="ritAreas"></div>
           </div>
         </article>
       </div>
@@ -630,7 +657,13 @@
 
   // Apartado Asistencia (Sistema de Control - Rituales | PSR | QRQC)
   const ASIS_INICIO = '2026-W32';
-  const ASIS_META_RITUALES = 21;    // número de áreas que deben registrar su ritual cada semana
+  // Áreas que deben registrar ritual cada semana (las mismas de la página de Rituales).
+  const AREAS_RITUALES = ["LAVS","ENVIOS A220","GALLEYS & SMALL/MONUMENTOS","SHIP LOOSE","F2F","CASCADAS",
+    "MAQUINADO Y TROQUELADO","AIRBUS","BONDEO","COMAC","DECORADO, PINTURA Y LIJADO","MANTENIMIENTO","ALMACEN",
+    "INSERTOS A220","CNC 3X","CNC 5X","LAMINADO / HORNOS","BOEING","MOLDES / PRENSAS","DUCTOS","BERTHA ZERON"];
+  const ASIS_META_PCT = 100;        // meta de cumplimiento de rituales (%)
+  // Cambia si cambia la forma de guardar, para recalcular el resumen completo.
+  const ASIS_VERSION = 'v2-areas';
   const METAS_QRQC = { TOTAL: 33, N1: 19, N2: 13, N3: 1 };
 
   /* ================= FIREBASE ================= */
@@ -870,7 +903,7 @@
   const COLECCIONES_ASIS = [['asistenciasQRQC', 'QRQC'], ['asistenciasPSR', 'PSR'], ['rituales', 'RIT']];
   const tareaAsistencias = forzar => ejecutar('asistencias', forzar, async () => {
     const previo = resumen.asistencias || {};
-    const completa = !previo.semanas || previo.inicio !== ASIS_INICIO;
+    const completa = !previo.semanas || previo.inicio !== ASIS_INICIO || previo.version !== ASIS_VERSION;
     const cols = completa ? {} : { ...(previo.cols || {}) };
     const semanas = completa ? {} : JSON.parse(JSON.stringify(previo.semanas || {}));
     const inicio = FS.Timestamp.fromDate(lunesDe(ASIS_INICIO));
@@ -908,13 +941,18 @@
           // Foros eliminados de la lista: se conserva el nombre que trae el registro.
           if (!foros[id]) foros[id] = { nombre: x.foroNombre || '—', nivel: x.foroNivel || '', eliminado: true };
         }
+        if (tipo === 'RIT' && x.area) {
+          // Áreas distintas con ritual en la semana (igual que la página de Rituales).
+          w.areas = w.areas || [];
+          if (!w.areas.includes(x.area)) w.areas.push(x.area);
+        }
         if (!hasta || f > hasta) { hasta = f; enHasta = new Set([doc.id]); }
         else if (+f === +hasta) enHasta.add(doc.id);
       });
       cols[col] = { hasta: hasta ? FS.Timestamp.fromDate(hasta) : null, idsEnHasta: [...enHasta] };
     });
 
-    const nuevo = { inicio: ASIS_INICIO, cols, semanas, foros };
+    const nuevo = { inicio: ASIS_INICIO, version: ASIS_VERSION, cols, semanas, foros };
     await terminar('asistencias', { asistencias: nuevo });
     resumen.asistencias = nuevo;
     return nuevos;
@@ -1253,7 +1291,61 @@
                 y: { stacked: true, beginAtZero: true, grace: '10%', ticks: { precision: 0, callback: v => fmt(v) } } } }
   });
 
-  const graficoAsisRituales = graficoBarrasMeta('graficoAsisRituales', 'Rituales registrados', ASIS_META_RITUALES);
+  // Cumplimiento de rituales en porcentaje (áreas con ritual ÷ total de áreas).
+  const pctTxt = v => v == null ? '' : Math.round(v) + '%';
+  const graficoAsisRituales = new Chart(document.getElementById('graficoAsisRituales'), {
+    data: { labels: [], datasets: [
+      { type: 'line', label: 'Meta', data: [], order: 1,
+        borderColor: '#F2A65A', backgroundColor: '#F2A65A', borderWidth: 2, pointRadius: 0,
+        datalabels: { display: c => c.dataIndex === c.dataset.data.length - 1,
+          align: 'bottom', anchor: 'end', color: '#F2A65A', font: { size: 11, weight: 500 }, formatter: pctTxt } },
+      { type: 'bar', label: '% Cumplimiento', data: [], order: 2, borderRadius: 3, maxBarThickness: 34,
+        backgroundColor: c => {
+          const v = c.raw || 0;
+          return v >= 90 ? '#4FB286' : v >= 70 ? '#E0B43C' : '#D0574B';
+        },
+        datalabels: { display: true, anchor: 'end', align: 'end', offset: 2, color: '#EAF0F5',
+          font: { size: 10, weight: 500 }, formatter: pctTxt } }
+    ] },
+    options: { ...opcionesBase,
+      layout: { padding: { top: 14 } },
+      plugins: { ...opcionesBase.plugins,
+        legend: { display: false },
+        tooltip: { ...tooltipBase, callbacks: {
+          label: c => c.dataset.type === 'line'
+            ? ' Meta: ' + pctTxt(c.parsed.y)
+            : ' ' + pctTxt(c.parsed.y) + ' (' + (graficoAsisRituales.$areas?.[c.dataIndex] || 0) + ' de ' + AREAS_RITUALES.length + ' áreas)' } } },
+      scales: { x: { grid: { display: false } },
+                y: { beginAtZero: true, max: 100, ticks: { stepSize: 25, callback: v => v + '%' } } } }
+  });
+
+  const selRitSemana = document.getElementById('ritSemana');
+  selRitSemana.addEventListener('change', () => pintarAsistencias());
+
+  // Áreas registradas en la semana: solo cuentan las de la lista oficial.
+  const areasDe = (datos, s) => (datos[s]?.areas || []).filter(a => AREAS_RITUALES.includes(a));
+
+  function pintarSemaforoRituales(datos, semana) {
+    const registradas = new Set(areasDe(datos, semana));
+    const total = AREAS_RITUALES.length, cnt = registradas.size;
+    const pct = Math.round(cnt / total * 100);
+    document.getElementById('ritTitulo').textContent =
+      'Cumplimiento ' + etiqueta(semana) + ' · ' + cnt + ' de ' + total + ' áreas';
+    document.getElementById('ritPct').textContent = pct + '%';
+    const barra = document.getElementById('ritBarra');
+    barra.style.width = pct + '%';
+    barra.style.background = pct >= 90 ? '#4FB286' : pct >= 70 ? '#E0B43C' : '#D0574B';
+    const cont = document.getElementById('ritAreas');
+    cont.replaceChildren(...AREAS_RITUALES.map(a => {
+      const div = document.createElement('div');
+      div.className = 'area' + (registradas.has(a) ? ' ok' : '');
+      div.title = a + (registradas.has(a) ? ': registrado' : ': sin registro');
+      const punto = document.createElement('i'); punto.className = 'punto';
+      const nombre = document.createElement('span'); nombre.textContent = a;
+      div.append(punto, nombre);
+      return div;
+    }));
+  }
 
   const graficoAsisForos = new Chart(document.getElementById('graficoAsisForos'), {
     type: 'bar',
@@ -1294,10 +1386,20 @@
     graficoAsisSemana.data.datasets[1].data = semanas.map(s => datos[s]?.PSR || 0);
     graficoAsisSemana.update();
 
+    const areasPorSemana = semanas.map(s => areasDe(datos, s).length);
+    graficoAsisRituales.$areas = areasPorSemana;
     graficoAsisRituales.data.labels = labels;
-    graficoAsisRituales.data.datasets[0].data = semanas.map(() => ASIS_META_RITUALES);
-    graficoAsisRituales.data.datasets[1].data = semanas.map(s => datos[s]?.RIT || 0);
+    graficoAsisRituales.data.datasets[0].data = semanas.map(() => ASIS_META_PCT);
+    graficoAsisRituales.data.datasets[1].data = areasPorSemana.map(n => Math.round(n / AREAS_RITUALES.length * 100));
     graficoAsisRituales.update();
+
+    // Semáforo por área de la semana elegida.
+    const ritElegida = selRitSemana.value || semanaHoy();
+    if (selRitSemana.options.length !== semanas.length) {
+      selRitSemana.replaceChildren(...[...semanas].reverse().map(s => new Option(etiqueta(s), s)));
+    }
+    selRitSemana.value = semanas.includes(ritElegida) ? ritElegida : semanaHoy();
+    pintarSemaforoRituales(datos, selRitSemana.value);
 
     // Selector de semana, la más reciente primero.
     const elegida = selAsisSemana.value || semanaHoy();
@@ -1366,9 +1468,12 @@
     }
     pintarProyectos();
   };
-  const tareasAsistencias = forzar =>
-    (forzar || vencida('asistencias'))
-      && correr('asistencias', tareaAsistencias, forzar, pintarAsistencias, 'estadoAsistencia', 'Registro de Asistencia');
+  const tareasAsistencias = forzar => {
+    // Si cambió la forma de guardar, recalcular de inmediato aunque el resumen esté vigente.
+    const forzarVersion = !!resumen.asistencias && resumen.asistencias.version !== ASIS_VERSION;
+    return (forzar || forzarVersion || vencida('asistencias'))
+      && correr('asistencias', tareaAsistencias, forzar || forzarVersion, pintarAsistencias, 'estadoAsistencia', 'Registro de Asistencia');
+  };
   const tareasQRQC = forzar => {
     // Si cambió la forma de contar, recalcular de inmediato aunque el resumen esté vigente.
     const forzarVersion = !!resumen.qrqc && resumen.qrqc.version !== QRQC_VERSION;
