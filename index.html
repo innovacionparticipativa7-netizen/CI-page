@@ -541,7 +541,8 @@
   const CADA = {
     ipVisitas:    3 * HORA,   // registros nuevos de "ingresos" del Catálogo IP
     ipInventario: 12 * HORA,  // valor del catálogo y puntos por cobrar (lee productos y usuarios)
-    qrqc:         1 * HORA    // evaluaciones QRQC de la semana en curso
+    qrqc:         1 * HORA,   // evaluaciones QRQC de la semana en curso
+    proyectos:    6 * HORA    // historial del Panel de Proyectos (solo si su base permite leer sin sesión)
   };
   const BLOQUEO_MS = 2 * 60 * 1000;   // evita que dos personas actualicen lo mismo a la vez
 
@@ -584,8 +585,14 @@
     appId: "1:63981350477:web:29ba416796dbd74313b604"
   }, 'qrqc').firestore();
 
+  const dbPSR = firebase.initializeApp({
+    apiKey: "AIzaSyAoVH8wQ2ofolAaJYdFnu1COcwI-xvaNnM",
+    authDomain: "panel-proyectos-f119f.firebaseapp.com",
+    projectId: "panel-proyectos-f119f"
+  }, 'psr').firestore();
+
   const FS = firebase.firestore;
-  const RESUMEN = dbQ.collection('tableroCI').doc('resumen');
+  const RESUMEN =dbQ.collection('tableroCI').doc('resumen');
   let resumen = {};
 
   /* ================= SEMANAS ISO (lunes a domingo) ================= */
@@ -756,6 +763,36 @@
     const k = semanaHoy(), foto = { inventario, puntos, tomado: Date.now() };
     await terminar('ipInventario', { ['ipSemanas.semanas.' + k]: foto });
     resumen.ipSemanas.semanas[k] = foto;
+  });
+
+  /* ================= TAREA: EVALUACIONES DE PROYECTOS (respaldo) ================= */
+  // Normalmente el Panel de Proyectos publica este resumen. Si su base permite leer
+  // sin iniciar sesión, la Central también puede armarlo directamente.
+  const tareaProyectos = forzar => ejecutar('proyectos', forzar, async () => {
+    const desde = lunesDe(PROY_INICIO);
+    const snap = await dbPSR.collection('historial').orderBy('fecha', 'desc').limit(1000).get();
+    const semanas = {};
+    snap.forEach(doc => {
+      const h = doc.data();
+      const f = fechaDe(h.fecha);
+      if (!f || f < desde) return;
+      const s = semanaISO(f);
+      const w = semanas[s] || (semanas[s] = { total: 0, evaluadores: {} });
+      w.total++;
+      const uid = h.usuario || 'sin-usuario';
+      const ev = w.evaluadores[uid] || (w.evaluadores[uid] = { nombre: h.usuarioNombre || '–', proyectos: [] });
+      if (h.proyectoId && !ev.proyectos.includes(h.proyectoId)) ev.proyectos.push(h.proyectoId);
+    });
+    // Conservar los nombres que ya publicó el Panel (vienen del perfil del usuario).
+    for (const [s, w] of Object.entries(semanas)) {
+      for (const [uid, ev] of Object.entries(w.evaluadores)) {
+        const previo = Object.values(resumen.proyectos?.semanas || {}).map(x => x.evaluadores?.[uid]?.nombre).find(Boolean);
+        if (previo) ev.nombre = previo;
+      }
+    }
+    const nuevo = { semanas };
+    await terminar('proyectos', { proyectos: nuevo });
+    resumen.proyectos = nuevo;
   });
 
   /* ================= TAREA: EVALUACIONES QRQC ================= */
@@ -1083,6 +1120,25 @@
     (forzar || vencida('ipInventario') || !resumen.ipSemanas?.semanas?.[semanaHoy()])
       && correr('ipInventario', tareaInventario, forzar, pintarInventario, 'estadoInventarioIP', 'Catálogo IP')
   ]);
+  // Si la base de proyectos pide sesión, no es un error: los datos llegan desde el Panel.
+  const tareasProyectos = async forzar => {
+    if (!forzar && !vencida('proyectos')) return;
+    // Si ya se comprobó que la base pide sesión, no reintentar durante 24 h.
+    if (!forzar && Date.now() - (resumen.intentos?.proyectosSinAcceso || 0) < 24 * HORA) return;
+    try {
+      await tareaProyectos(forzar);
+    } catch (error) {
+      console.info('Central CI: sin lectura directa del Panel de Proyectos:', error.code || error.message);
+      if (/permission/i.test(String(error.code) + ' ' + error.message)) {
+        try { await RESUMEN.update({ 'intentos.proyectosSinAcceso': Date.now() }); } catch (_) {}
+      } else {
+        pintarProyectos();
+        ponerEstado('estadoProyectos', mensajeError(error, 'Panel de Proyectos'), true);
+        return;
+      }
+    }
+    pintarProyectos();
+  };
   const tareasQRQC = forzar =>
     (forzar || vencida('qrqc')) && correr('qrqc', tareaQRQC, forzar, pintarQRQC, 'estadoQRQC', 'QRQC');
 
@@ -1099,7 +1155,7 @@
     resumen.ipSemanas = resumen.ipSemanas || { semanas: {}, metas: {} };
     resumen.ipSemanas.semanas = resumen.ipSemanas.semanas || {};
     pintarProyectos(); pintarVisitas(); pintarInventario(); pintarQRQC();
-    await Promise.all([tareasIP(false), tareasQRQC(false)]);
+    await Promise.all([tareasProyectos(false), tareasIP(false), tareasQRQC(false)]);
   }
 
   // Botones "Actualizar datos": consultan las fuentes aunque el resumen esté vigente.
